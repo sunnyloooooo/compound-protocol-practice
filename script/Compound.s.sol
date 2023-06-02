@@ -2,11 +2,11 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
-import {CErc20Delegator} from "compound-protocal/contracts/CErc20Delegator.sol";
+import {CErc20Delegator} from "compound-protocol/contracts/CErc20Delegator.sol";
 import {Erc20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
-import {Unitroller} from "compound-protocal/contracts/Unitroller.sol";
-import {SimplePriceOracle} from "compound-protocal/contracts/SimplePriceOracle.sol";
-import {WhitePaperInterestRateModel} from "compound-protocal/contracts/WhitePaperInterestRateModel.sol";
+import {Unitroller} from "compound-protocol/contracts/Unitroller.sol";
+import {SimplePriceOracle} from "compound-protocol/contracts/SimplePriceOracle.sol";
+import {WhitePaperInterestRateModel} from "compound-protocol/contracts/WhitePaperInterestRateModel.sol";
 
 contract CompoundDeployScript is Script {
     // Deploy CErc20Delegator, Unitroller, and related contracts
