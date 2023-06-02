@@ -45,7 +45,7 @@ contract CompoundDeployScript is Script {
             ""
         );
 
-        unitroller._setPendingImplementation(address(cErc20Delegator));
+        cErc20Delegator._setPendingImplementation(address(cErc20Delegate));
 
         // Print contract addresses for verification
         vm.printAddress("CErc20Delegator", address(cErc20Delegator));
