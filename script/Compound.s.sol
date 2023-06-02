@@ -8,9 +8,9 @@ import {Unitroller} from "compound-protocal/contracts/Unitroller.sol";
 import {SimplePriceOracle} from "compound-protocal/contracts/SimplePriceOracle.sol";
 import {WhitePaperInterestRateModel} from "compound-protocal/contracts/WhitePaperInterestRateModel.sol";
 
-contract CompoundDeployScript {
+contract CompoundDeployScript is Script {
     // Deploy CErc20Delegator, Unitroller, and related contracts
-    function deployContracts() public {
+    function run() external {
         // Deploy underlying ERC20 token
         Erc20 underlyingToken = new Erc20("Underlying Token", "UNDERLYING", 18);
 
