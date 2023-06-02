@@ -16,35 +16,44 @@ contract CompoundDeployScript is Script {
         vm.startBroadcast(privateKey);
 
         // Deploy underlying ERC20 token
-        Erc20 underlyingToken = new Erc20("Underlying Token", "UNDERLYING", 18);
+        Erc20 underlyingToken = new Erc20("Underlying Token", "UTK", 18);
 
         // Deploy SimplePriceOracle
         SimplePriceOracle priceOracle = new SimplePriceOracle();
 
         // Deploy WhitePaperInterestRateModel
-        WhitePaperInterestRateModel interestRateModel = new WhitePaperInterestRateModel();
-        interestRateModel.init(0, 0, 0, 0); // Set borrow and supply rates to 0%
+        // 0% borrow and supply rates
+        WhitePaperInterestRateModel interestRateModel = new WhitePaperInterestRateModel(0,0);
+
+        // Deploy CErc20Delegate
+        CErc20Delegate cErc20Delegate = new CErc20Delegate();
 
         // Deploy Unitroller
         Unitroller unitroller = new Unitroller();
 
         // Deploy CErc20Delegator
-        // Deploy CErc20Delegator
-        CErc20Delegator cToken = new CErc20Delegator(
+        CErc20Delegator cErc20Delegator = new CErc20Delegator(
             address(underlyingToken),
-            address(unitroller),
-            address(interestRateModel),
+            ComptrollerInterface(address(unitroller)),
+            interestRateModel,
             1e18,
-            "cToken",
-            "CTKN",
+            "cERC20",
+            "cERC",
             18,
-            payable(msg.sender),
-            address(0), // Replace with your implementation contract address
+            msg.sender,
+            address(cErc20Delegate),
             ""
         );
 
-        // Set cToken's implementation
-        cToken._setImplementation(address(implementation), false, "");
+        unitroller._setPendingImplementation(address(cErc20Delegator));
+
+        // Print contract addresses for verification
+        vm.printAddress("CErc20Delegator", address(cErc20Delegator));
+        vm.printAddress("Unitroller", address(unitroller));
+        vm.printAddress("Underlying Token", address(underlyingToken));
+        vm.printAddress("CErc20Delegate", address(cErc20Delegate));
+        vm.printAddress("InterestRateModel", address(interestRateModel));
+        vm.printAddress("PriceOracle", address(priceOracle));
         vm.stopBroadcast();
     }
 }
