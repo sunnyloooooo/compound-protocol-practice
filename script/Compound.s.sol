@@ -11,6 +11,10 @@ import {WhitePaperInterestRateModel} from "compound-protocal/contracts/WhitePape
 contract CompoundDeployScript is Script {
     // Deploy CErc20Delegator, Unitroller, and related contracts
     function run() external {
+        string memory seedPhrase = vm.readFile(".secret");
+        uint256 privateKey = vm.deriveKey(seedPhrase, 0);
+        vm.startBroadcast(privateKey);
+
         // Deploy underlying ERC20 token
         Erc20 underlyingToken = new Erc20("Underlying Token", "UNDERLYING", 18);
 
@@ -41,5 +45,6 @@ contract CompoundDeployScript is Script {
 
         // Set cToken's implementation
         cToken._setImplementation(address(implementation), false, "");
+        vm.stopBroadcast();
     }
 }
