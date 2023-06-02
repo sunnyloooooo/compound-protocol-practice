@@ -3,10 +3,12 @@ pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
 import {CErc20Delegator} from "compound-protocol/contracts/CErc20Delegator.sol";
-import {Erc20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {CErc20Delegate} from "compound-protocol/contracts/CErc20Delegate.sol";
+import {ComptrollerInterface} from "compound-protocol/contracts/ComptrollerInterface.sol";
 import {Unitroller} from "compound-protocol/contracts/Unitroller.sol";
 import {SimplePriceOracle} from "compound-protocol/contracts/SimplePriceOracle.sol";
 import {WhitePaperInterestRateModel} from "compound-protocol/contracts/WhitePaperInterestRateModel.sol";
+import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 contract CompoundDeployScript is Script {
     // Deploy CErc20Delegator, Unitroller, and related contracts
@@ -16,7 +18,7 @@ contract CompoundDeployScript is Script {
         vm.startBroadcast(privateKey);
 
         // Deploy underlying ERC20 token
-        Erc20 underlyingToken = new Erc20("Underlying Token", "UTK", 18);
+        ERC20 underlyingToken = new ERC20("Underlying Token", "UTK");
 
         // Deploy SimplePriceOracle
         SimplePriceOracle priceOracle = new SimplePriceOracle();
@@ -40,20 +42,11 @@ contract CompoundDeployScript is Script {
             "cERC20",
             "cERC",
             18,
-            msg.sender,
+            payable(msg.sender),
             address(cErc20Delegate),
             ""
         );
 
-        cErc20Delegator._setPendingImplementation(address(cErc20Delegate));
-
-        // Print contract addresses for verification
-        vm.printAddress("CErc20Delegator", address(cErc20Delegator));
-        vm.printAddress("Unitroller", address(unitroller));
-        vm.printAddress("Underlying Token", address(underlyingToken));
-        vm.printAddress("CErc20Delegate", address(cErc20Delegate));
-        vm.printAddress("InterestRateModel", address(interestRateModel));
-        vm.printAddress("PriceOracle", address(priceOracle));
         vm.stopBroadcast();
     }
 }
