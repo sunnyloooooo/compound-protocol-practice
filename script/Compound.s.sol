@@ -10,6 +10,7 @@ import {Unitroller} from "compound-protocol/contracts/Unitroller.sol";
 import {CToken} from "compound-protocol/contracts/CToken.sol";
 import {SimplePriceOracle} from "compound-protocol/contracts/SimplePriceOracle.sol";
 import {WhitePaperInterestRateModel} from "compound-protocol/contracts/WhitePaperInterestRateModel.sol";
+import {InterestRateModel} from "compound-protocol/contracts/InterestRateModel.sol";
 import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 contract CompoundDeployScript is Script {
@@ -32,7 +33,7 @@ contract CompoundDeployScript is Script {
         // utilizationRate * multiplierPerBlock + baseRatePerBlock
         // utilizationRate = 0, borrow rate = baseRatePerBlock (5%)
         // utilizationRate = 1, borrow rate = baseRatePerBlock + multiplierPerBlock (17%)
-        WhitePaperInterestRateModel interestRateModel = new WhitePaperInterestRateModel(
+        WhitePaperInterestRateModel whitePaper = new WhitePaperInterestRateModel(
                 5e16, // 5%: baseRatePerYear
                 12e16 // 12%: multiplierPerYear
             );
@@ -62,7 +63,7 @@ contract CompoundDeployScript is Script {
         CErc20Delegator cErc20Delegator = new CErc20Delegator(
             address(underlyingToken),
             ComptrollerInterface(address(unitroller)),
-            interestRateModel,
+            InterestRateModel(address(whitePaper)),
             1e18,
             "cERC20",
             "cERC",
