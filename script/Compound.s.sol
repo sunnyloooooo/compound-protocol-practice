@@ -2,26 +2,79 @@
 pragma solidity ^0.8.0;
 
 import "forge-std/Script.sol";
-import {CErc20Delegator} from "compound-protocol/contracts/CErc20Delegator.sol";
-import {CErc20Delegate} from "compound-protocol/contracts/CErc20Delegate.sol";
-import {ComptrollerInterface} from "compound-protocol/contracts/ComptrollerInterface.sol";
-import {Comptroller} from "compound-protocol/contracts/Comptroller.sol";
-import {Unitroller} from "compound-protocol/contracts/Unitroller.sol";
-import {CToken} from "compound-protocol/contracts/CToken.sol";
-import {SimplePriceOracle} from "compound-protocol/contracts/SimplePriceOracle.sol";
-import {WhitePaperInterestRateModel} from "compound-protocol/contracts/WhitePaperInterestRateModel.sol";
-import {InterestRateModel} from "compound-protocol/contracts/InterestRateModel.sol";
-import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+
+//cToken
+import "compound-protocol/contracts/CErc20Delegator.sol";
+import "compound-protocol/contracts/CErc20Delegate.sol";
+import "compound-protocol/contracts/CToken.sol";
+//comptroller
+import "compound-protocol/contracts/Unitroller.sol";
+import "compound-protocol/contracts/Comptroller.sol";
+//interestModel
+import "compound-protocol/contracts/WhitePaperInterestRateModel.sol";
+//priceOracle
+import "compound-protocol/contracts/SimplePriceOracle.sol";
 
 contract CompoundDeployScript is Script {
     ERC20 public underlyingToken;
+    ERC20 public underlyingTokenNo2;
     CErc20Delegator public cErc20;
+    CErc20Delegator public cErc20No2;
     CErc20Delegate public cErc20Delegate;
     Unitroller public unitroller;
     Comptroller public comptroller;
     Comptroller public unitrollerProxy;
     WhitePaperInterestRateModel public whitePaper;
     SimplePriceOracle public priceOracle;
+
+    // deploy CErc20Delegator
+    function deployCErc20(
+        address _underlyingToken,
+        string memory _name,
+        string memory _symbol
+    ) public returns (CErc20Delegator) {
+        CErc20Delegator _cErc20 = new CErc20Delegator(
+            _underlyingToken,
+            ComptrollerInterface(address(unitroller)),
+            InterestRateModel(address(whitePaper)),
+            1e18,
+            _name,
+            _symbol,
+            18,
+            payable(msg.sender),
+            address(cErc20Delegate),
+            new bytes(0x00)
+        );
+
+        return _cErc20;
+    }
+
+    function deployCErc20No2() public {
+        vm.startBroadcast();
+        // Deploy the second cERC20 contract, and underlying token call UTK2.
+        underlyingTokenNo2 = new ERC20("Underlying Token No2", "UTK2");
+        cErc20No2 = deployCErc20(
+            address(underlyingTokenNo2),
+            "cERC20No2",
+            "cERC2"
+        );
+
+        // Set the price of a cErc20No2 to $100
+        priceOracle.setUnderlyingPrice(
+            CToken(address(cErc20No2)),
+            100 * 10 ** 18
+        );
+
+        // support the market of cErc20No2
+        unitrollerProxy._supportMarket(CToken(address(cErc20No2)));
+        // Set the collateral factor of cErc20No2 to 50%
+        unitrollerProxy._setCollateralFactor(
+            CToken(address(cErc20No2)),
+            500000000000000000 // 50%
+        );
+        vm.stopBroadcast();
+    }
 
     function deploy() public {
         // reveal if you want to use a private key
@@ -66,18 +119,7 @@ contract CompoundDeployScript is Script {
         bytes memory data = new bytes(0x00);
 
         // Deploy CErc20Delegator
-        cErc20 = new CErc20Delegator(
-            address(underlyingToken),
-            ComptrollerInterface(address(unitroller)),
-            InterestRateModel(address(whitePaper)),
-            1e18,
-            "cERC20",
-            "cERC",
-            18,
-            payable(msg.sender),
-            address(cErc20Delegate),
-            data
-        );
+        cErc20 = deployCErc20(address(underlyingToken), "cERC20", "cERC");
 
         cErc20._setImplementation(address(cErc20Delegate), false, data);
 
