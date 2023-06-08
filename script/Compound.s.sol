@@ -18,9 +18,7 @@ import "compound-protocol/contracts/SimplePriceOracle.sol";
 
 contract CompoundDeployScript is Script {
     ERC20 public underlyingToken;
-    ERC20 public underlyingTokenNo2;
     CErc20Delegator public cErc20;
-    CErc20Delegator public cErc20No2;
     CErc20Delegate public cErc20Delegate;
     Unitroller public unitroller;
     Comptroller public comptroller;
@@ -30,6 +28,7 @@ contract CompoundDeployScript is Script {
 
     // deploy CErc20Delegator
     function deployCErc20(
+        address deployer,
         address _underlyingToken,
         string memory _name,
         string memory _symbol
@@ -42,7 +41,7 @@ contract CompoundDeployScript is Script {
             _name,
             _symbol,
             18,
-            payable(msg.sender),
+            payable(deployer),
             address(cErc20Delegate),
             new bytes(0x00)
         );
@@ -50,38 +49,7 @@ contract CompoundDeployScript is Script {
         return _cErc20;
     }
 
-    function deployCErc20No2() public {
-        vm.startBroadcast();
-        // Deploy the second cERC20 contract, and underlying token call UTK2.
-        underlyingTokenNo2 = new ERC20("Underlying Token No2", "UTK2");
-        cErc20No2 = deployCErc20(
-            address(underlyingTokenNo2),
-            "cERC20No2",
-            "cERC2"
-        );
-
-        // Set the price of a cErc20No2 to $100
-        priceOracle.setUnderlyingPrice(
-            CToken(address(cErc20No2)),
-            100 * 10 ** 18
-        );
-
-        // support the market of cErc20No2
-        unitrollerProxy._supportMarket(CToken(address(cErc20No2)));
-        // Set the collateral factor of cErc20No2 to 50%
-        unitrollerProxy._setCollateralFactor(
-            CToken(address(cErc20No2)),
-            500000000000000000 // 50%
-        );
-        vm.stopBroadcast();
-    }
-
-    function deploy() public {
-        // reveal if you want to use a private key
-        // string memory seedPhrase = vm.readFile(".secret");
-        // uint256 privateKey = vm.deriveKey(seedPhrase, 0);
-        // vm.startBroadcast(privateKey);
-        vm.startBroadcast();
+    function deploy(address deployer) public {
         // Deploy underlying ERC20 token
         underlyingToken = new ERC20("Underlying Token", "UTK");
 
@@ -119,24 +87,35 @@ contract CompoundDeployScript is Script {
         bytes memory data = new bytes(0x00);
 
         // Deploy CErc20Delegator
-        cErc20 = deployCErc20(address(underlyingToken), "cERC20", "cERC");
+        cErc20 = deployCErc20(
+            deployer,
+            address(underlyingToken),
+            "cERC20",
+            "cERC"
+        );
 
         cErc20._setImplementation(address(cErc20Delegate), false, data);
 
         // set underlying price
-        priceOracle.setUnderlyingPrice(CToken(address(cErc20)), 1e18);
+        priceOracle.setDirectPrice(address(underlyingToken), 1e18);
+
         // support market
         unitrollerProxy._supportMarket(CToken(address(cErc20)));
         unitrollerProxy._setCollateralFactor(
             CToken(address(cErc20)),
             600000000000000000 // 60%
         );
-        vm.stopBroadcast();
     }
 
     // interestRate, priceOracle, comptorller, ctoken
     // Deploy CErc20Delegator, Unitroller, and related contracts
     function run() external {
-        deploy();
+        // reveal if you want to use a private key
+        // string memory seedPhrase = vm.readFile(".secret");
+        // uint256 privateKey = vm.deriveKey(seedPhrase, 0);
+        // vm.startBroadcast(privateKey);
+        vm.startBroadcast();
+        deploy(msg.sender);
+        vm.stopBroadcast();
     }
 }
