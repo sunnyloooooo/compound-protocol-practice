@@ -4,3 +4,12 @@
 [submodule "lib/compound-protocol"]
 	path = lib/compound-protocol
 	url = https://github.com/compound-finance/compound-protocol
+[submodule "lib/aave-v3-core"]
+	path = lib/aave-v3-core
+	url = https://github.com/aave/aave-v3-core
+[submodule "lib/v2-core"]
+	path = lib/v2-core
+	url = https://github.com/Uniswap/v2-core
+[submodule "lib/v2-periphery"]
+	path = lib/v2-periphery
+	url = https://github.com/Uniswap/v2-periphery
