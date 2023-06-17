@@ -88,19 +88,20 @@ contract CompoundAaveDeployScript is Script {
             deployer,
             USDCAddress,
             address(cUSDCDelegate),
-            1e12,
+            // 10 * 10 ** ( 18 - 18:ctoken + 6:usdc )
+            10 * (10 ** 6),
             "cUSCD",
             "cUSDC"
         );
 
         cUSDC._setImplementation(address(cUSDCDelegate), false, data);
-        cUSDC._setReserveFactor(25e16);
 
         cUNI = deployCErc20(
             deployer,
             UNIAddress,
             address(cUNIDelegate),
-            1e18,
+            // 10 * 10 ** ( 18 - 18:ctoken + 18:usdc )
+            10 * 10 ** 18,
             "cUNI",
             "cUNI"
         );
@@ -109,7 +110,8 @@ contract CompoundAaveDeployScript is Script {
         cUNI._setReserveFactor(25e16);
 
         // set underlying price
-        priceOracle.setUnderlyingPrice(CToken(address(cUSDC)), 1e18); // $1
+        // uint256 price = ( 10**18 / 10**erc20Decimals ) * 1e18
+        priceOracle.setUnderlyingPrice(CToken(address(cUSDC)), 1e30); // $1
         priceOracle.setUnderlyingPrice(CToken(address(cUNI)), 5e18); // $5
 
         // support market

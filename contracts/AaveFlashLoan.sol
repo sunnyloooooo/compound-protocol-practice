@@ -1,42 +1,43 @@
 pragma solidity 0.8.19;
 
-import "forge-std/Test.sol";
-import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
-import {ERC20} from "openzeppelin/token/ERC20/ERC20.sol";
+import "forge-std/console.sol";
+import "openzeppelin/token/ERC20/IERC20.sol";
+import "openzeppelin/token/ERC20/ERC20.sol";
 import {IFlashLoanSimpleReceiver, IPoolAddressesProvider, IPool} from "aave-v3-core/contracts/flashloan/interfaces/IFlashLoanSimpleReceiver.sol";
-import {CErc20Delegator} from "compound-protocol/contracts/CErc20Delegator.sol";
-import {CErc20Delegate} from "compound-protocol/contracts/CErc20Delegate.sol";
-import {CErc20} from "compound-protocol/contracts/CErc20.sol";
-import {CToken} from "compound-protocol/contracts/CToken.sol";
-import {CTokenInterface} from "compound-protocol/contracts/CTokenInterfaces.sol";
-import {ComptrollerInterface} from "compound-protocol/contracts/ComptrollerInterface.sol";
-import {InterestRateModel} from "compound-protocol/contracts/InterestRateModel.sol";
-import {Comptroller} from "compound-protocol/contracts/Comptroller.sol";
-import {WhitePaperInterestRateModel} from "compound-protocol/contracts/WhitePaperInterestRateModel.sol";
-import {Unitroller} from "compound-protocol/contracts/Unitroller.sol";
-import {SimplePriceOracle} from "compound-protocol/contracts/SimplePriceOracle.sol";
-import {PriceOracle} from "compound-protocol/contracts/PriceOracle.sol";
 import {ISwapRouter} from "v3-periphery/contracts/interfaces/ISwapRouter.sol";
 import {TransferHelper} from "v3-periphery/contracts/libraries/TransferHelper.sol";
+
+//cToken
+import "compound-protocol/contracts/CErc20Delegator.sol";
+import "compound-protocol/contracts/CErc20Delegate.sol";
+import "compound-protocol/contracts/CToken.sol";
+//comptroller
+import "compound-protocol/contracts/Unitroller.sol";
+import "compound-protocol/contracts/Comptroller.sol";
+//interestModel
+import "compound-protocol/contracts/WhitePaperInterestRateModel.sol";
+//priceOracle
+import "compound-protocol/contracts/SimplePriceOracle.sol";
 
 // TODO: Inherit IFlashLoanSimpleReceiver
 contract AaveFlashLoan is IFlashLoanSimpleReceiver {
     address constant POOL_ADDRESSES_PROVIDER =
         0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e;
     address UNISWAP_V3_ROUTER = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
+    uint256 constant usdcAmount = 1250 * 10 ** 6;
 
     struct CallbackData {
-        address UNIAddress;
-        address USDCAddress;
-        IERC20 USDC;
-        IERC20 UNI;
         address liquidator;
         address borrower;
-        Comptroller unitrollerProxy;
+        address USDCAddress;
+        address UNIAddress;
+        IERC20 USDC;
+        IERC20 UNI;
         CErc20Delegator cUSDC;
         CErc20Delegator cUNI;
-        CErc20Delegate cUNIDelegate;
         CErc20Delegate cUSDCDelegate;
+        CErc20Delegate cUNIDelegate;
+        Comptroller unitrollerProxy;
     }
 
     function executeOperation(
@@ -48,22 +49,20 @@ contract AaveFlashLoan is IFlashLoanSimpleReceiver {
     ) external returns (bool) {
         CallbackData memory callBackData = abi.decode(params, (CallbackData));
 
-        callBackData.USDC.approve(address(callBackData.cUSDC), 1250e18);
+        callBackData.USDC.approve(address(callBackData.cUSDC), usdcAmount);
         (uint error, uint liquidity, uint shortfall) = callBackData
             .unitrollerProxy
             .getAccountLiquidity(address(callBackData.borrower));
 
         if (error == 0 && liquidity == 0 && shortfall > 0) {
-            console.log("liquidating");
-            uint repayAmount = 1250e18;
             callBackData.cUSDC.liquidateBorrow(
                 callBackData.borrower,
-                repayAmount,
+                usdcAmount,
                 CTokenInterface(address(callBackData.cUNI))
             );
         }
-
-        //redeem cUNI to UNI
+        // get cUNI by borrow collateral after liquidate
+        // redeem cUNI to UNI
         callBackData.cUNI.redeem(callBackData.cUNI.balanceOf(address(this)));
         uint256 UNIBalance = callBackData.UNI.balanceOf(address(this));
 
@@ -85,9 +84,7 @@ contract AaveFlashLoan is IFlashLoanSimpleReceiver {
             swapParams
         );
         // repay
-        callBackData.USDC.approve(address(POOL()), 1250e18 + premium);
-        callBackData.USDC.transfer(callBackData.liquidator, amountOut);
-
+        callBackData.USDC.approve(address(POOL()), usdcAmount + premium);
         return true;
     }
 
@@ -98,32 +95,32 @@ contract AaveFlashLoan is IFlashLoanSimpleReceiver {
         address _UNIAddress,
         IERC20 _USDC,
         IERC20 _UNI,
-        Comptroller _unitrollerProxy,
         CErc20Delegator _cUSDC,
         CErc20Delegator _cUNI,
         CErc20Delegate _cUSDCDelegate,
-        CErc20Delegate _cUNIDelegate
+        CErc20Delegate _cUNIDelegate,
+        Comptroller _unitrollerProxy
     ) external {
         // TODO
-        CallbackData memory callbackUsed = CallbackData({
+        CallbackData memory callbackData = CallbackData({
             liquidator: _liquidator,
             borrower: _borrower,
             USDCAddress: _USDCAddress,
             UNIAddress: _UNIAddress,
             USDC: _USDC,
             UNI: _UNI,
-            unitrollerProxy: _unitrollerProxy,
             cUSDC: _cUSDC,
             cUNI: _cUNI,
             cUSDCDelegate: _cUSDCDelegate,
-            cUNIDelegate: _cUNIDelegate
+            cUNIDelegate: _cUNIDelegate,
+            unitrollerProxy: _unitrollerProxy
         });
 
         POOL().flashLoanSimple(
             address(this),
             _USDCAddress,
-            1,
-            abi.encode(callbackUsed),
+            usdcAmount,
+            abi.encode(callbackData),
             0
         );
     }
